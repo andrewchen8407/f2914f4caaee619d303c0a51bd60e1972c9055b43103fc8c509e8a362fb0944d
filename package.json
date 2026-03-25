@@ -1,0 +1,33 @@
+{
+  "name": "team13-supply-chain-provenance",
+  "version": "1.0.0",
+  "description": "Blockchain-based Supply Chain Provenance System for CSE 540",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:amoy": "hardhat run scripts/deploy.js --network amoy"
+  },
+  "keywords": [
+    "blockchain",
+    "solidity",
+    "erc721",
+    "provenance",
+    "supply-chain"
+  ],
+  "author": "Team 13",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "ethers": "^6.10.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
