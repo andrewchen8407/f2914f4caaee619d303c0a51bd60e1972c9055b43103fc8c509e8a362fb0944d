@@ -137,7 +137,7 @@ contract SupplyChainProvenance {
      * @param batchId  The product batch to query
      * @return product The requested Product struct
      */
-    function getProduct(uint256 batchId) external view returns (Product product) {
+    function getProduct(uint256 batchId) external view returns (Product memory product) {
         // TODO
     }
 }
