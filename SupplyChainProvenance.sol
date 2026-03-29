@@ -27,7 +27,7 @@ contract SupplyChainProvenance {
         Distributor,
         Warehouse,
         Retailer,
-        Consumer,
+        Consumer
     }
 
     /**
@@ -42,7 +42,7 @@ contract SupplyChainProvenance {
         Shipped,
         Received,
         Delivered,
-        Sold,
+        Sold
     }
 
     /**
@@ -128,7 +128,7 @@ contract SupplyChainProvenance {
      * @notice Marks a product as sold to an end consumer.
      * @param batchId  The product batch being sold
      */
-    function markAsSold(uint256 batchId) external onlyRole(RETAILER_ROLE) {
+    function markAsSold(uint256 batchId) external {
         // TODO
     }
 
