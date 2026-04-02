@@ -7,6 +7,18 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 contract SupplyChainProvenance is ERC721, AccessControl {
 
+    // Example: Overriding for ERC721 and AccessControl
+    // Adding this function to suppress the following error: "Derived contract must override function 'supportsInterface'. Two or more base classes define function with same name and parameter types."
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721, AccessControl) // List ALL parent contracts here
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
     /**
       * @notice Represents the roles that can interact with the provenance system.
       * Producers can:
@@ -31,15 +43,6 @@ contract SupplyChainProvenance is ERC721, AccessControl {
     bytes32 public constant WAREHOUSE_ROLE = keccak256("WAREHOUSE_ROLE");
     bytes32 public constant RETAILER_ROLE = keccak256("RETAILER_ROLE");
     bytes32 public constant CONSUMER_ROLE = keccak256("CONSUMER_ROLE");
-
-    // Delete this later
-    enum Role {
-        Producer,
-        Distributor,
-        Warehouse,
-        Retailer,
-        Consumer
-    }
 
     /**
       * @notice Represents the status of a product
@@ -79,7 +82,6 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         bool exists;
     }
 
-    mapping(address => Role) public userRoles;
     uint256 private nextBatchId;
     mapping(uint256 => Product) private products;
 
@@ -91,7 +93,8 @@ contract SupplyChainProvenance is ERC721, AccessControl {
       * @notice Deploys the contract
       */
     constructor() ERC721("SupplyChainProvenance", "SCP") {
-        userRoles[msg.sender] = Role.Producer;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(PRODUCER_ROLE, msg.sender);
         nextBatchId = 1;
     }
 
@@ -111,7 +114,7 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         nextBatchId++;
 
         products[batchId] = Product({
-            batchId: batchId;
+            batchId: batchId,
             productName: productName,
             origin: origin,
             currentOwner: msg.sender,
@@ -122,7 +125,7 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         });
 
         _safeMint(msg.sender, batchId);
-
+        emit ProductRegistered(batchId, msg.sender, productName);
         return batchId;
     }
 
@@ -135,7 +138,19 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         uint256 batchId,
         address newOwner
     ) external {
-        // TODO
+        require(products[batchId].exists, "Product does not exist");
+        require(ownerOf(batchId) == msg.sender, "Not current owner");
+
+        require(
+            hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
+            hasRole(WAREHOUSE_ROLE, msg.sender) ||
+            hasRole(RETAILER_ROLE, msg.sender),
+            "Not authorized to transfer ownership"
+        );
+        // TODO: think about whether we want to enforce a rule that a product can only be transferred to certain roles, e.g. distributor cannot transfer back to producer
+        safeTransferFrom(msg.sender, newOwner, batchId);
+        products[batchId].currentOwner = newOwner;
+        emit OwnershipTransferred(batchId, msg.sender, newOwner);
     }
 
     /**
@@ -147,9 +162,10 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         uint256 batchId,
         ProductStatus newStatus
     ) external {
-        // TODO
+        require(products[batchId].exists, "Product does not exist");
+        products[batchId].status = newStatus;
+        emit StatusUpdated(batchId, newStatus);
     }
-    
 
     /**
      * @notice Marks a product as received by the calling warehouse or retailer.
