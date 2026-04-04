@@ -5,6 +5,9 @@
 
 This project implements a **Tokenized Asset Tracking System** on the Polygon Amoy testnet. Each product batch is represented as a unique ERC-721 NFT that records its full provenance (origin, custody transfers, status updates) on an immutable blockchain ledger. The system creates a transparent, traceable, and trustworthy record for products moving through the supply chain.
 
+## Smart Contract (Interim Demo)
+`SupplyChainProvenance.sol` – ERC-721 + AccessControl implementation with proper role enforcement.
+
 ## Dependencies
 ```bash
 Node.js == 20.0.0
@@ -31,9 +34,10 @@ npm install
 ```
 
 ## Usage & Deployment
-To compile the smart contracts and generate artifacts:
+To compile the smart contracts and generate artifacts, then run the code:
 ```bash
 npx hardhat compile
+npx hardhat run scripts/demo.js --network hardhat
 ```
 
 ## Deploying to Polygon Amoy Testnet
