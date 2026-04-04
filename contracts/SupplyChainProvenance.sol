@@ -65,6 +65,7 @@ contract SupplyChainProvenance is ERC721, AccessControl {
     constructor() ERC721("SupplyChainProvenance", "SCP") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PRODUCER_ROLE, msg.sender);
+        _grantRole(DISTRIBUTOR_ROLE, msg.sender);
     }
 
     /**
@@ -131,44 +132,61 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         require(products[batchId].exists, "Product does not exist");
         console.log("Owner is:", ownerOf(batchId));
 
-        // require(
-        //     hasRole(PRODUCER_ROLE, msg.sender) ||
-        //     hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
-        //     hasRole(WAREHOUSE_ROLE, msg.sender) ||
-        //     hasRole(RETAILER_ROLE, msg.sender),
-        //     "Not authorized to update status"
-        // );
+        // initially problematic; might have to investigate
+        require(
+            hasRole(PRODUCER_ROLE, msg.sender) ||
+            hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
+            hasRole(WAREHOUSE_ROLE, msg.sender) ||
+            hasRole(RETAILER_ROLE, msg.sender),
+            "Not authorized to update status"
+        );
 
         products[batchId].status = newStatus;
         emit StatusUpdated(batchId, newStatus);
     }
 
-    // TODO: Implement receiveProduct (Warehouse / Retailer only)
     /**
      * @notice Marks a product as received by the calling warehouse or retailer.
      * @param batchId The product batch being received
      */
     function receiveProduct(uint256 batchId) external {
-        // TODO
+        require(products[batchId].exists, "Product does not exist");
+        require(
+            hasRole(WAREHOUSE_ROLE, msg.sender) ||
+            hasRole(RETAILER_ROLE, msg.sender),
+            "Only Warehouse or Retailer can receive"
+        );
+        
+        if (hasRole(WAREHOUSE_ROLE, msg.sender)) {
+            products[batchId].status = ProductStatus.InStorage;
+        }
+        else if (hasRole(RETAILER_ROLE, msg.sender)) {
+            products[batchId].status = ProductStatus.InStock;
+        }
+        // else-block theoretically should not run
+        else {
+            products[batchId].status = ProductStatus.Delivered;
+        }
     }
 
-    // TODO: Implement markAsSold (Retailer only)
     /**
      * @notice Marks a product as sold to an end consumer.
      * @param batchId The product batch being sold
      */
     function markAsSold(uint256 batchId) external {
-        // TODO
+        require(products[batchId].exists, "Product does not exist");
+        require(hasRole(RETAILER_ROLE, msg.sender), "Only Retailer can mark as sold");
+        products[batchId].status = ProductStatus.Sold;
     }
 
-    // TODO: Implement getProduct (public read-only)
     /**
      * @notice Returns all stored data for a given product batch.
      * @param batchId The product batch to query
      * @return product The requested Product struct
      */
     function getProduct(uint256 batchId) external view returns (Product memory) {
-        // TODO
+        require(products[batchId].exists, "Product does not exist");
+        return products[batchId];
     }
 
     function supportsInterface(bytes4 interfaceId)
