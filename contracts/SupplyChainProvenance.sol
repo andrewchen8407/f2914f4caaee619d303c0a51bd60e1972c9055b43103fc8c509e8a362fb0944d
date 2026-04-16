@@ -23,12 +23,14 @@ contract SupplyChainProvenance is ERC721, AccessControl {
       * Sold - Product sold to end consumer
       */
     enum ProductStatus {
-        Originated,  // Producer registers batch; only Producer can update from Originated to Shipped
-        Shipped,  // Distributor ships product
-        InStorage,  // Only Warehouse can change status from Shipped to InStorage
-        Delivered,  // Warehouse has sent the product to Retailer
-        InStock,  // Retailer receives product
-        Sold  // Retailer updates status from Delivered to Sold when Consumer buys product
+        Originated,
+        InTransitToDistributor,
+        AtDistributor,
+        InTransitToWarehouse,
+        AtWarehouse,
+        InTransitToRetailer,
+        AtRetailer,
+        Sold
     }
 
     /**
@@ -112,8 +114,7 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         require(
             hasRole(PRODUCER_ROLE, msg.sender) ||
             hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
-            hasRole(WAREHOUSE_ROLE, msg.sender) ||
-            hasRole(RETAILER_ROLE, msg.sender),
+            hasRole(WAREHOUSE_ROLE, msg.sender),
             "Not authorized to transfer"
         );
 
@@ -152,20 +153,27 @@ contract SupplyChainProvenance is ERC721, AccessControl {
     function receiveProduct(uint256 batchId) external {
         require(products[batchId].exists, "Product does not exist");
         require(
+            hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
             hasRole(WAREHOUSE_ROLE, msg.sender) ||
             hasRole(RETAILER_ROLE, msg.sender),
-            "Only Warehouse or Retailer can receive"
+            "Only Distributor, Warehouse and Retailer can receive"
         );
         
-        if (hasRole(WAREHOUSE_ROLE, msg.sender)) {
-            products[batchId].status = ProductStatus.InStorage;
+        if (hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
+            products[batchId].status = ProductStatus.AtDistributor;
+            emit StatusUpdated(batchId, ProductStatus.AtDistributor);
+        }
+        else if (hasRole(WAREHOUSE_ROLE, msg.sender)) {
+            products[batchId].status = ProductStatus.AtWarehouse;
+            emit StatusUpdated(batchId, ProductStatus.AtWarehouse);
         }
         else if (hasRole(RETAILER_ROLE, msg.sender)) {
-            products[batchId].status = ProductStatus.InStock;
+            products[batchId].status = ProductStatus.AtRetailer;
+            emit StatusUpdated(batchId, ProductStatus.AtRetailer);
         }
         // else-block theoretically should not run
         else {
-            products[batchId].status = ProductStatus.Delivered;
+            assert(false);
         }
     }
 
@@ -176,7 +184,9 @@ contract SupplyChainProvenance is ERC721, AccessControl {
     function markAsSold(uint256 batchId) external {
         require(products[batchId].exists, "Product does not exist");
         require(hasRole(RETAILER_ROLE, msg.sender), "Only Retailer can mark as sold");
+        products[batchId].currentOwner = address(0);
         products[batchId].status = ProductStatus.Sold;
+        emit StatusUpdated(batchId, ProductStatus.Sold);
     }
 
     /**
