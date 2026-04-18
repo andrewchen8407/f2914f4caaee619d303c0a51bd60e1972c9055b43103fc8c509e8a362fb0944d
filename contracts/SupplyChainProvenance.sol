@@ -21,7 +21,7 @@ contract SupplyChainProvenance is ERC721, AccessControl {
       * Delivered - Product sent to retailer by warehouse
       * InStock - Product received by retailer
       * Sold - Product sold to end consumer
-      */
+      */－－
     enum ProductStatus {
         Originated,
         InTransitToDistributor,
@@ -64,6 +64,8 @@ contract SupplyChainProvenance is ERC721, AccessControl {
     /**
      * @notice Deploys the contract
      */
+    // TODO: Check whether Warehouse and Retailer roles still need to be assigned
+    // separately for demo/testing.
     constructor() ERC721("SupplyChainProvenance", "SCP") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PRODUCER_ROLE, msg.sender);
@@ -107,6 +109,15 @@ contract SupplyChainProvenance is ERC721, AccessControl {
      * @param batchId The product batch to transfer
      * @param newOwner Address of the incoming owner
      */
+     // TODO: Align transferProduct() with the new architecture diagram.
+
+    // TODO: When transferring, also update status automatically:
+    // Producer -> InTransitToDistributor
+    // Distributor -> InTransitToWarehouse
+    // Warehouse -> InTransitToRetailer
+    //
+    // Also restrict transfer path to:
+    // Producer -> Distributor -> Warehouse -> Retailer
     function transferProduct(uint256 batchId, address newOwner) external {
         require(products[batchId].exists, "Product does not exist");
         require(ownerOf(batchId) == msg.sender, "Not current owner");
@@ -129,6 +140,13 @@ contract SupplyChainProvenance is ERC721, AccessControl {
      * @param batchId The product batch to update
      * @param newStatus The new ProductStatus value
      */
+    // TODO: UpdatStatus can be removed.
+    // Status should no longer be changed manually.
+    // It should now be controlled only by:
+    // - registerProduct()
+    // - transferProduct()
+    // - receiveProduct()
+    // - markAsSold()
     function updateStatus(uint256 batchId, ProductStatus newStatus) external {
         require(products[batchId].exists, "Product does not exist");
         console.log("Owner is:", ownerOf(batchId));
@@ -150,6 +168,17 @@ contract SupplyChainProvenance is ERC721, AccessControl {
      * @notice Marks a product as received by the calling warehouse or retailer.
      * @param batchId The product batch being received
      */
+     // TODO: Align receiveProduct() with the new architecture diagram.
+    // TODO: receiveProduct() should only confirm receipt, not change ownership.
+    //
+    // Add checks:
+    // - caller must be current owner
+    // - status must match the expected in-transit stage
+    //
+    // Then update status to:
+    // Distributor -> AtDistributor
+    // Warehouse -> AtWarehouse
+    // Retailer -> AtRetailer
     function receiveProduct(uint256 batchId) external {
         require(products[batchId].exists, "Product does not exist");
         require(
@@ -181,6 +210,12 @@ contract SupplyChainProvenance is ERC721, AccessControl {
      * @notice Marks a product as sold to an end consumer.
      * @param batchId The product batch being sold
      */
+    // TODO: markAsSold() should only be allowed when:
+    // - caller is Retailer
+    // - caller is current owner
+    // - product status is AtRetailer
+    // TODO: Decide whether "sold" means only Product.currentOwner = address(0),
+    // or whether ERC721 ownership should also be changed/burned.
     function markAsSold(uint256 batchId) external {
         require(products[batchId].exists, "Product does not exist");
         require(hasRole(RETAILER_ROLE, msg.sender), "Only Retailer can mark as sold");
