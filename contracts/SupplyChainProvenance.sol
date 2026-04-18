@@ -21,7 +21,7 @@ contract SupplyChainProvenance is ERC721, AccessControl {
       * Delivered - Product sent to retailer by warehouse
       * InStock - Product received by retailer
       * Sold - Product sold to end consumer
-      */－－
+      */
     enum ProductStatus {
         Originated,
         InTransitToDistributor,
@@ -70,6 +70,8 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(PRODUCER_ROLE, msg.sender);
         _grantRole(DISTRIBUTOR_ROLE, msg.sender);
+        _grantRole(WAREHOUSE_ROLE, msg.sender);
+        _grantRole(RETAILER_ROLE, msg.sender);
     }
 
     /**
@@ -122,47 +124,69 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         require(products[batchId].exists, "Product does not exist");
         require(ownerOf(batchId) == msg.sender, "Not current owner");
 
-        require(
-            hasRole(PRODUCER_ROLE, msg.sender) ||
-            hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
-            hasRole(WAREHOUSE_ROLE, msg.sender),
-            "Not authorized to transfer"
-        );
+        // require(
+        //     hasRole(PRODUCER_ROLE, msg.sender) ||
+        //     hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
+        //     hasRole(WAREHOUSE_ROLE, msg.sender),
+        //     "Not authorized to transfer"
+        // );
+
+        ProductStatus newStatus;
+
+        if (hasRole(PRODUCER_ROLE, msg.sender)) {
+            require(hasRole(DISTRIBUTOR_ROLE, newOwner), "Producer can only transfer to Distributor");
+            newStatus = ProductStatus.InTransitToDistributor;
+        }
+        else if (hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
+            require(hasRole(WAREHOUSE_ROLE, newOwner), "Distributor can only transfer to Warehouse");
+            newStatus = ProductStatus.InTransitToWarehouse;
+        }
+        else if (hasRole(WAREHOUSE_ROLE, msg.sender)) {
+            require(hasRole(RETAILER_ROLE, newOwner), "Warehouse can only transfer to Retailer");
+            newStatus = ProductStatus.InTransitToRetailer;
+        }
+        else {
+            revert("Not authorized to transfer");
+        }
 
         _transfer(msg.sender, newOwner, batchId);
         products[batchId].currentOwner = newOwner;
         console.log("Owner is:", ownerOf(batchId));
+        
+        products[batchId].status = newStatus;
+        emit StatusUpdated(batchId, newStatus);
+        
         emit OwnershipTransferred(batchId, msg.sender, newOwner);
     }
 
-    /**
-     * @notice Updates the status of a product batch.
-     * @param batchId The product batch to update
-     * @param newStatus The new ProductStatus value
-     */
-    // TODO: UpdatStatus can be removed.
-    // Status should no longer be changed manually.
-    // It should now be controlled only by:
-    // - registerProduct()
-    // - transferProduct()
-    // - receiveProduct()
-    // - markAsSold()
-    function updateStatus(uint256 batchId, ProductStatus newStatus) external {
-        require(products[batchId].exists, "Product does not exist");
-        console.log("Owner is:", ownerOf(batchId));
+    // /**
+    //  * @notice Updates the status of a product batch.
+    //  * @param batchId The product batch to update
+    //  * @param newStatus The new ProductStatus value
+    //  */
+    // // TODO: UpdatStatus can be removed.
+    // // Status should no longer be changed manually.
+    // // It should now be controlled only by:
+    // // - registerProduct()
+    // // - transferProduct()
+    // // - receiveProduct()
+    // // - markAsSold()
+    // function updateStatus(uint256 batchId, ProductStatus newStatus) external {
+    //     require(products[batchId].exists, "Product does not exist");
+    //     console.log("Owner is:", ownerOf(batchId));
 
-        // initially problematic; might have to investigate
-        require(
-            hasRole(PRODUCER_ROLE, msg.sender) ||
-            hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
-            hasRole(WAREHOUSE_ROLE, msg.sender) ||
-            hasRole(RETAILER_ROLE, msg.sender),
-            "Not authorized to update status"
-        );
+    //     // initially problematic; might have to investigate
+    //     require(
+    //         hasRole(PRODUCER_ROLE, msg.sender) ||
+    //         hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
+    //         hasRole(WAREHOUSE_ROLE, msg.sender) ||
+    //         hasRole(RETAILER_ROLE, msg.sender),
+    //         "Not authorized to update status"
+    //     );
 
-        products[batchId].status = newStatus;
-        emit StatusUpdated(batchId, newStatus);
-    }
+    //     products[batchId].status = newStatus;
+    //     emit StatusUpdated(batchId, newStatus);
+    // }
 
     /**
      * @notice Marks a product as received by the calling warehouse or retailer.
@@ -187,6 +211,7 @@ contract SupplyChainProvenance is ERC721, AccessControl {
             hasRole(RETAILER_ROLE, msg.sender),
             "Only Distributor, Warehouse and Retailer can receive"
         );
+        require(ownerOf(batchId) == msg.sender, "Only current owner can receive");
         
         if (hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
             products[batchId].status = ProductStatus.AtDistributor;
@@ -216,9 +241,9 @@ contract SupplyChainProvenance is ERC721, AccessControl {
     // - product status is AtRetailer
     // TODO: Decide whether "sold" means only Product.currentOwner = address(0),
     // or whether ERC721 ownership should also be changed/burned.
-    function markAsSold(uint256 batchId) external {
+    function markAsSold(uint256 batchId) external onlyRole(RETAILER_ROLE) {
         require(products[batchId].exists, "Product does not exist");
-        require(hasRole(RETAILER_ROLE, msg.sender), "Only Retailer can mark as sold");
+
         products[batchId].currentOwner = address(0);
         products[batchId].status = ProductStatus.Sold;
         emit StatusUpdated(batchId, ProductStatus.Sold);
