@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Supply Chain Provenance - Team 13</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; font-size: 16px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .log { background: #222; color: #0f0; padding: 15px; height: 400px; overflow-y: scroll; font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Register New Product</h2>
+        <input id="productName" placeholder="Product Name" value="Organic Coffee Batch #42">
+        <input id="origin" placeholder="Origin" value="Ethiopia">
+        <button onclick="registerProduct()">Register Product (Mint NFT)</button>
+
+        <h2>Supply Chain Steps</h2>
+
+        <h3>Current Product Info</h3>
+
+        <div class="log" id="log"></div>
+    </div>
+</body>
+</html>

@@ -152,10 +152,9 @@ contract SupplyChainProvenance is ERC721, AccessControl {
         _transfer(msg.sender, newOwner, batchId);
         products[batchId].currentOwner = newOwner;
         console.log("Owner is:", ownerOf(batchId));
-        
         products[batchId].status = newStatus;
+
         emit StatusUpdated(batchId, newStatus);
-        
         emit OwnershipTransferred(batchId, msg.sender, newOwner);
     }
 
@@ -205,30 +204,53 @@ contract SupplyChainProvenance is ERC721, AccessControl {
     // Retailer -> AtRetailer
     function receiveProduct(uint256 batchId) external {
         require(products[batchId].exists, "Product does not exist");
-        require(
-            hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
-            hasRole(WAREHOUSE_ROLE, msg.sender) ||
-            hasRole(RETAILER_ROLE, msg.sender),
-            "Only Distributor, Warehouse and Retailer can receive"
-        );
         require(ownerOf(batchId) == msg.sender, "Only current owner can receive");
+
+        // require(
+        //     hasRole(DISTRIBUTOR_ROLE, msg.sender) ||
+        //     hasRole(WAREHOUSE_ROLE, msg.sender) ||
+        //     hasRole(RETAILER_ROLE, msg.sender),
+        //     "Only Distributor, Warehouse and Retailer can receive"
+        // );
         
-        if (hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
-            products[batchId].status = ProductStatus.AtDistributor;
-            emit StatusUpdated(batchId, ProductStatus.AtDistributor);
+        // if (hasRole(DISTRIBUTOR_ROLE, msg.sender)) {
+        //     products[batchId].status = ProductStatus.AtDistributor;
+        //     emit StatusUpdated(batchId, ProductStatus.AtDistributor);
+        // }
+        // else if (hasRole(WAREHOUSE_ROLE, msg.sender)) {
+        //     products[batchId].status = ProductStatus.AtWarehouse;
+        //     emit StatusUpdated(batchId, ProductStatus.AtWarehouse);
+        // }
+        // else if (hasRole(RETAILER_ROLE, msg.sender)) {
+        //     products[batchId].status = ProductStatus.AtRetailer;
+        //     emit StatusUpdated(batchId, ProductStatus.AtRetailer);
+        // }
+        // // else-block theoretically should not run
+        // else {
+        //     assert(false);
+        // }
+
+        ProductStatus current = products[batchId].status;
+        ProductStatus newStatus;
+
+        if (current == ProductStatus.InTransitToDistributor) {
+            require(hasRole(DISTRIBUTOR_ROLE, msg.sender), "Only Distributor can receive");
+            newStatus = ProductStatus.AtDistributor;
         }
-        else if (hasRole(WAREHOUSE_ROLE, msg.sender)) {
-            products[batchId].status = ProductStatus.AtWarehouse;
-            emit StatusUpdated(batchId, ProductStatus.AtWarehouse);
+        else if (current == ProductStatus.InTransitToWarehouse) {
+            require(hasRole(WAREHOUSE_ROLE, msg.sender), "Only Warehouse can receive");
+            newStatus = ProductStatus.AtWarehouse;
         }
-        else if (hasRole(RETAILER_ROLE, msg.sender)) {
-            products[batchId].status = ProductStatus.AtRetailer;
-            emit StatusUpdated(batchId, ProductStatus.AtRetailer);
+        else if (current == ProductStatus.InTransitToRetailer) {
+            require(hasRole(RETAILER_ROLE, msg.sender), "Only Retailer can receive");
+            newStatus = ProductStatus.AtRetailer;
         }
-        // else-block theoretically should not run
         else {
-            assert(false);
+            revert("Product is not in a valid transit state");
         }
+
+        products[batchId].status = newStatus;
+        emit StatusUpdated(batchId, newStatus);
     }
 
     /**
@@ -243,6 +265,7 @@ contract SupplyChainProvenance is ERC721, AccessControl {
     // or whether ERC721 ownership should also be changed/burned.
     function markAsSold(uint256 batchId) external onlyRole(RETAILER_ROLE) {
         require(products[batchId].exists, "Product does not exist");
+        require(products[batchId].status == ProductStatus.AtRetailer, "Product must be at retailer");
 
         products[batchId].currentOwner = address(0);
         products[batchId].status = ProductStatus.Sold;
