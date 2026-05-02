@@ -973,7 +973,7 @@
       const metadata = "ipfs://Qm" + Math.random().toString(36).substring(2, 15);
 
       try {
-        log("⏳ Registering new product...");
+        log("Registering new product...");
         const tx = await contract.registerProduct(name, origin, metadata);
         await tx.wait();
         currentBatchId = 0;
