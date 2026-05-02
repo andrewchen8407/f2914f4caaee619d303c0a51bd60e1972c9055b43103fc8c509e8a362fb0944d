@@ -34,7 +34,7 @@
 
   <script>
     let contract;
-    const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";   // ← Update with your latest address
+    const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
     const ABI = [
     {
@@ -956,7 +956,7 @@
       const provider = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545");
       const wallet = new ethers.Wallet("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider);
       contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
-      log("✅ Connected to local Hardhat network (no real fees)");
+      log("Connected to local Hardhat network (no real fees)");
     }
 
     function log(msg) {
@@ -979,11 +979,11 @@
         currentBatchId = 0;
         currentStep = 0;
         isCompleted = false;
-        log(`✅ Product registered! Batch ID: ${currentBatchId}`);
+        log(`Product registered! Batch ID: ${currentBatchId}`);
         await refreshProductInfo();
         document.getElementById("currentStep").innerHTML = steps[0];
       } catch (e) {
-        log("❌ Error: " + e.message);
+        log("Error: " + e.message);
       }
     }
 
@@ -1016,14 +1016,14 @@
         } else if (currentStep === 7) {
           await contract.markAsSold(currentBatchId);
           isCompleted = true;
-          log("🎉 Product journey completed - marked as Sold!");
+          log("Product journey completed - marked as Sold!");
         }
 
         currentStep++;
         document.getElementById("currentStep").innerHTML = steps[currentStep] || "Completed";
         await refreshProductInfo();
       } catch (e) {
-        log("❌ Error during step: " + e.message);
+        log("Error during step: " + e.message);
       }
     }
 
