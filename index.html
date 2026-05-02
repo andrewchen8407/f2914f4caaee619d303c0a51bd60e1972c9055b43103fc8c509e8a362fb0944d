@@ -24,7 +24,8 @@
 
     <h2>Step-by-Step Supply Chain</h2>
     <button onclick="nextStep()">Next Step in Supply Chain</button>
-    <p><strong>Current step:</strong> <span id="currentStep">Not started</span></p>
+    <p><strong>Current Batch ID:</strong> <span id="batchDisplay">None</span> | 
+       <strong>Current step:</strong> <span id="currentStep">Not started</span></p>
 
     <h3>Current Product Info</h3>
     <pre id="productInfo">Register a product to begin...</pre>
@@ -975,11 +976,16 @@
       try {
         log("Registering new product...");
         const tx = await contract.registerProduct(name, origin, metadata);
-        await tx.wait();
-        currentBatchId = 0;
+        const receipt = await tx.wait();
+
+        const mintedEvent = receipt.events.find(e => e.event === "ProductMinted");
+        currentBatchId = mintedEvent ? mintedEvent.args.batchId.toNumber() : 0;
+
         currentStep = 0;
         isCompleted = false;
-        log(`Product registered! Batch ID: ${currentBatchId}`);
+
+        log("Product registered! Batch ID: " + currentBatchId);
+        document.getElementById("batchDisplay").innerHTML = currentBatchId;
         await refreshProductInfo();
         document.getElementById("currentStep").innerHTML = steps[0];
       } catch (e) {
@@ -993,14 +999,13 @@
       }
 
       if (isCompleted) {
-        return alert("This product's journey is complete.\nPlease register a new product to start a new supply chain.");
+        return alert("This product's journey is complete. Register a new product to start again.");
       }
 
       try {
-        log(`\n--- Step ${currentStep + 1}: ${steps[currentStep]} ---`);
+        log("Step " + (currentStep + 1) + ": " + steps[currentStep]);
 
         if (currentStep === 0) {
-          // Already done during registration
         } else if (currentStep === 1) {
           await contract.transferProduct(currentBatchId, "0x0000000000000000000000000000000000000002");
         } else if (currentStep === 2) {
